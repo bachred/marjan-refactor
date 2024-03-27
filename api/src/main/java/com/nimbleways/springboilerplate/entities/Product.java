@@ -24,8 +24,9 @@ public class Product {
     @Column(name = "available")
     private Integer available;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "type")
-    private String type;
+    private ProductType type;
 
     @Column(name = "name")
     private String name;
@@ -38,4 +39,15 @@ public class Product {
 
     @Column(name = "season_end_date")
     private LocalDate seasonEndDate;
+
+    // flashsale attributs
+
+    @Column(name = "max_flash_sale_quantity")
+    private Integer maxFlashSaleQuantity;
+
+    @Column(name = "flash_sale_start_date")
+    private LocalDateTime flashSaleStartDate;
+
+    @Column(name = "flash_sale_end_date")
+    private LocalDateTime flashSaleEndDate;
 }

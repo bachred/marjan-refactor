@@ -16,4 +16,9 @@ public class NotificationService {
 
     public void sendExpirationNotification(String productName, LocalDate expiryDate) {
     }
+
+    public void sendFlashSaleEndedNotification(String productName) {
+
+        System.out.println("Notification : La vente flash pour le produit " + productName + " est terminée.");
+    }
 }

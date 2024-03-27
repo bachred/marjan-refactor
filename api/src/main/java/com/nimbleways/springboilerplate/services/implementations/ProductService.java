@@ -12,38 +12,89 @@ import com.nimbleways.springboilerplate.repositories.ProductRepository;
 public class ProductService {
 
     @Autowired
-    ProductRepository pr;
+    private ProductRepository productRepository;
 
     @Autowired
-    NotificationService ns;
+    private NotificationService notificationService;
 
-    public void notifyDelay(int leadTime, Product p) {
-        p.setLeadTime(leadTime);
-        pr.save(p);
-        ns.sendDelayNotification(leadTime, p.getName());
-    }
 
-    public void handleSeasonalProduct(Product p) {
-        if (LocalDate.now().plusDays(p.getLeadTime()).isAfter(p.getSeasonEndDate())) {
-            ns.sendOutOfStockNotification(p.getName());
-            p.setAvailable(0);
-            pr.save(p);
-        } else if (p.getSeasonStartDate().isAfter(LocalDate.now())) {
-            ns.sendOutOfStockNotification(p.getName());
-            pr.save(p);
+    public void handleNormalProduct(Product product) {
+        if (product.getAvailable() > 0) {
+            product.setAvailable(product.getAvailable() - 1);
+            productRepository.save(product);
         } else {
-            notifyDelay(p.getLeadTime(), p);
+            int leadTime = product.getLeadTime();
+            if (leadTime > 0) {
+                notifyDelay(leadTime, product);
+            }
         }
     }
 
-    public void handleExpiredProduct(Product p) {
-        if (p.getAvailable() > 0 && p.getExpiryDate().isAfter(LocalDate.now())) {
-            p.setAvailable(p.getAvailable() - 1);
-            pr.save(p);
+    public void handleSeasonalProduct(Product product) {
+        if (LocalDate.now().isAfter(product.getSeasonStartDate()) && LocalDate.now().isBefore(product.getSeasonEndDate())
+                && product.getAvailable() > 0) {
+            product.setAvailable(product.getAvailable() - 1);
+            productRepository.save(product);
         } else {
-            ns.sendExpirationNotification(p.getName(), p.getExpiryDate());
-            p.setAvailable(0);
-            pr.save(p);
+            handleSeasonalProductAvailability(product);
         }
     }
+
+    public void handleExpirableProduct(Product product) {
+        if (product.getAvailable() > 0 && product.getExpiryDate().isAfter(LocalDate.now())) {
+            product.setAvailable(product.getAvailable() - 1);
+            productRepository.save(product);
+        } else {
+            handleExpiredProduct(product);
+        }
+    }
+
+    public void handleFlashSaleProduct(Product product) {
+        if (LocalDateTime.now().isAfter(product.getFlashSaleStartDate()) && LocalDateTime.now().isBefore(product.getFlashSaleEndDate())
+                && product.getAvailable() > 0 && product.getAvailable() <= product.getMaxFlashSaleQuantity()) {
+            product.setAvailable(product.getAvailable() - 1);
+            productRepository.save(product);
+        } else {
+            handleFlashSaleEnded(product);
+        }
+    }
+
+
+    private void handleSeasonalProductAvailability(Product product) {
+        if (LocalDate.now().plusDays(product.getLeadTime()).isAfter(product.getSeasonEndDate())) {
+            notificationService.sendOutOfStockNotification(product.getName());
+            product.setAvailable(0);
+            productRepository.save(product);
+        } else if (product.getSeasonStartDate().isAfter(LocalDate.now())) {
+            notificationService.sendOutOfStockNotification(product.getName());
+            productRepository.save(product);
+        } else {
+            notifyDelay(product.getLeadTime(), product);
+        }
+    }
+
+    private void handleExpiredProduct(Product product) {
+        if (product.getAvailable() > 0 && product.getExpiryDate().isAfter(LocalDate.now())) {
+            product.setAvailable(product.getAvailable() - 1);
+            productRepository.save(product);
+        } else {
+            notificationService.sendExpirationNotification(product.getName(), product.getExpiryDate());
+            product.setAvailable(0);
+            productRepository.save(product);
+        }
+    }
+
+    private void handleFlashSaleEnded(Product product) {
+        notificationService.sendFlashSaleEndedNotification(product.getName());
+        product.setAvailable(0);
+        productRepository.save(product);
+    }
+
+
+    private void notifyDelay(int leadTime, Product product) {
+        product.setLeadTime(leadTime);
+        productRepository.save(product);
+        notificationService.sendDelayNotification(leadTime, product.getName());
+    }
+
 }

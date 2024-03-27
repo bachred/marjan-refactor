@@ -3,6 +3,7 @@ package com.nimbleways.springboilerplate.contollers;
 import com.nimbleways.springboilerplate.dto.product.ProcessOrderResponse;
 import com.nimbleways.springboilerplate.entities.Order;
 import com.nimbleways.springboilerplate.entities.Product;
+import com.nimbleways.springboilerplate.enums.ProductType;
 import com.nimbleways.springboilerplate.repositories.OrderRepository;
 import com.nimbleways.springboilerplate.repositories.ProductRepository;
 import com.nimbleways.springboilerplate.services.implementations.ProductService;
@@ -24,52 +25,41 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/orders")
 public class MyController {
     @Autowired
-    private ProductService ps;
+    private ProductService productService;
 
     @Autowired
-    private ProductRepository pr;
-
-    @Autowired
-    private OrderRepository or;
+    private OrderRepository orderRepository;
 
     @PostMapping("{orderId}/processOrder")
     @ResponseStatus(HttpStatus.OK)
     public ProcessOrderResponse processOrder(@PathVariable Long orderId) {
-        Order order = or.findById(orderId).get();
+        Order order = orderRepository.findById(orderId).get();
         System.out.println(order);
-        List<Long> ids = new ArrayList<>();
-        ids.add(orderId);
+
         Set<Product> products = order.getItems();
-        for (Product p : products) {
-            if (p.getType().equals("NORMAL")) {
-                if (p.getAvailable() > 0) {
-                    p.setAvailable(p.getAvailable() - 1);
-                    pr.save(p);
-                } else {
-                    int leadTime = p.getLeadTime();
-                    if (leadTime > 0) {
-                        ps.notifyDelay(leadTime, p);
-                    }
-                }
-            } else if (p.getType().equals("SEASONAL")) {
-                // Add new season rules
-                if ((LocalDate.now().isAfter(p.getSeasonStartDate()) && LocalDate.now().isBefore(p.getSeasonEndDate())
-                        && p.getAvailable() > 0)) {
-                    p.setAvailable(p.getAvailable() - 1);
-                    pr.save(p);
-                } else {
-                    ps.handleSeasonalProduct(p);
-                }
-            } else if (p.getType().equals("EXPIRABLE")) {
-                if (p.getAvailable() > 0 && p.getExpiryDate().isAfter(LocalDate.now())) {
-                    p.setAvailable(p.getAvailable() - 1);
-                    pr.save(p);
-                } else {
-                    ps.handleExpiredProduct(p);
-                }
-            }
+        for (Product product : products) {
+            processProduct(product);
         }
 
         return new ProcessOrderResponse(order.getId());
+    }
+
+    private void processProduct(Product product) {
+        switch (product.getType()) {
+            case ProductType.NORMAL:
+                productService.handleNormalProduct(product);
+                break;
+            case ProductType.SEASONAL:
+                productService.handleSeasonalProduct(product);
+                break;
+            case ProductType.EXPIRABLE:
+                productService.handleExpirableProduct(product);
+                break;
+            case ProductType.FLASHSALE:
+                productService.handleFlashSaleProduct(product);
+                break;
+            default:
+                break;
+        }
     }
 }
