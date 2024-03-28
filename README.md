@@ -34,3 +34,10 @@ Votre tâche est d'ajouter le nouveau type de produits "FLASHSALE" à notre syst
   * unitaires: `mvnw test`
   * integration: `mvnw integration-test`
   * tous: `mvnw verify`
+
+
+## Processus de Refactoring
+
+Pour refactoriser ce code, je commencerais par identifier les répétitions de code complexes.
+Ensuite, j'organiserais le code de manière plus claire en extrayant des méthodes et en regroupant des fonctionnalités similaires,
+tout en utilisant les enums pour représenter les différents types de produits de manière plus claire.
